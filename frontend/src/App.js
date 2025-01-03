@@ -1,164 +1,180 @@
-import React, { useState, useEffect } from "react";
-import { connectWallet, getContract } from "./blockchain";
+// import React, { useState, useEffect } from 'react';
+// import { ethers } from 'ethers';
+// import ConnectWallet from './components/ConnectWallet';
+// import VotingSystem from './components/Contract';
+
+// const App = () => {
+//   const [provider, setProvider] = useState(null);
+//   const [account, setAccount] = useState('');
+//   const [balance, setBalance] = useState('');
+
+//   const handleWalletConnected = async (provider, account) => {
+//     setProvider(provider);
+//     setAccount(account);
+    
+//     try {
+//       const balance = await provider.getBalance(account);
+//       setBalance(ethers.formatEther(balance)); // Updated for ethers 6.x
+//     } catch (err) {
+//       console.error('Error fetching balance:', err);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (window.ethereum) {
+//       window.ethereum.on('accountsChanged', () => window.location.reload());
+//       window.ethereum.on('chainChanged', () => window.location.reload());
+//     }
+
+//     return () => {
+//       if (window.ethereum) {
+//         window.ethereum.removeListener('accountsChanged', () => window.location.reload());
+//         window.ethereum.removeListener('chainChanged', () => window.location.reload());
+//       }
+//     };
+//   }, []);
+
+//   const disconnectWallet = () => {
+//     setProvider(null);
+//     setAccount('');
+//     setBalance('');
+//   };
+
+//   return (
+//     <div className="container mx-auto p-4">
+//       <h1 className="text-2xl font-bold mb-4">Ethereum Wallet</h1>
+//       {!account ? (
+//         <ConnectWallet onWalletConnected={handleWalletConnected} />
+//       ) : (
+//         <div>
+//           <p>Account: {account}</p>
+//           <p>Balance: {balance} ETH</p>
+//           <button 
+//             onClick={disconnectWallet}
+//             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2"
+//           >
+//             Disconnect
+//           </button>
+//         </div>
+//       )}
+//       {account && (
+//     <VotingSystem provider={provider} account={account} />
+//   )}  
+
+//     </div>
+//   );
+// };
+
+// export default App;
+// import React, { useState } from 'react';
+// import { ethers } from 'ethers';
+
+// const ConnectWallet = ({ onWalletConnected }) => {
+//   const [error, setError] = useState('');
+//   const [isConnecting, setIsConnecting] = useState(false);
+
+//   const connectWallet = async () => {
+//     setIsConnecting(true);
+//     setError('');
+
+//     try {
+//       if (!window.ethereum) {
+//         throw new Error('MetaMask is not installed');
+//       }
+
+//       await window.ethereum.request({ method: 'eth_requestAccounts' });
+//       const provider = new ethers.BrowserProvider(window.ethereum);
+//       const signer = await provider.getSigner();
+//       const address = await signer.getAddress();
+
+//       onWalletConnected(provider, address);
+//     } catch (err) {
+//       setError(err.message);
+//     }
+//     setIsConnecting(false);
+//   };
+
+//   return (
+//     <div>
+//       {error && <div className="text-red-500 mb-2">{error}</div>}
+//       <button
+//         onClick={connectWallet}
+//         disabled={isConnecting}
+//         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+//       >
+//         {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+//       </button>
+//     </div>
+//   );
+// };
+
+// export default ConnectWallet;
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import ConnectWallet from './components/ConnectWallet';
+import VotingSystem from './components/Votingsystem';
 
 const App = () => {
-    const [walletAddress, setWalletAddress] = useState("");
-    const [contract, setContract] = useState(null);
-    const [polls, setPolls] = useState([]);
-    const [newPoll, setNewPoll] = useState({ title: "", options: [], duration: 0 });
-    const [pollResults, setPollResults] = useState({});
+  const [provider, setProvider] = useState(null);
+  const [account, setAccount] = useState('');
+  const [balance, setBalance] = useState('');
 
-    // Connect wallet and initialize contract
-    const connectToWallet = async () => {
-        try {
-            const signer = await connectWallet();
-            const address = await signer.getAddress();
-            setWalletAddress(address);
-            setContract(getContract(signer));
-        } catch (error) {
-            console.error("Error connecting wallet:", error);
-        }
-    };
+  const handleWalletConnected = async (provider, account) => {
+    setProvider(provider);
+    setAccount(account);
 
-    // Fetch poll details
-    const fetchPolls = async () => {
-        if (!contract) return;
-        try {
-            const pollList = [];
-            for (let i = 0; i < 10; i++) { // Adjust the range if you have more polls
-                try {
-                    const [title, options, endTime, creator] = await contract.getPollDetails(i);
-                    pollList.push({ id: i, title, options, endTime, creator });
-                } catch {
-                    break; // Stop fetching when no more polls exist
-                }
-            }
-            setPolls(pollList);
-        } catch (error) {
-            console.error("Error fetching polls:", error);
-        }
-    };
+    try {
+      const balance = await provider.getBalance(account);
+      setBalance(ethers.formatEther(balance)); // Updated for ethers.js v6
+    } catch (err) {
+      console.error('Error fetching balance:', err);
+    }
+  };
 
-    // Create a new poll
-    const createPoll = async () => {
-        if (!contract) return;
-        try {
-            const tx = await contract.createPoll(
-                newPoll.title,
-                newPoll.options,
-                newPoll.duration
-            );
-            await tx.wait();
-            alert("Poll created successfully!");
-            fetchPolls();
-        } catch (error) {
-            console.error("Error creating poll:", error);
-        }
-    };
+  const disconnectWallet = () => {
+    setProvider(null);
+    setAccount('');
+    setBalance('');
+  };
 
-    // Vote for a poll option
-    const voteForOption = async (pollId, optionIndex) => {
-        if (!contract) return;
-        try {
-            const tx = await contract.vote(pollId, optionIndex);
-            await tx.wait();
-            alert("Vote cast successfully!");
-            fetchPolls();
-        } catch (error) {
-            console.error("Error voting:", error);
-        }
-    };
+  useEffect(() => {
+    if (window.ethereum) {
+      const handleAccountsChanged = () => window.location.reload();
+      const handleChainChanged = () => window.location.reload();
 
-    // Fetch poll results
-    const fetchPollResults = async (pollId) => {
-        if (!contract) return;
-        try {
-            const results = await contract.getPollResults(pollId);
-            setPollResults((prevResults) => ({
-                ...prevResults,
-                [pollId]: results,
-            }));
-        } catch (error) {
-            console.error("Error fetching results:", error);
-        }
-    };
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
 
-    useEffect(() => {
-        if (contract) fetchPolls();
-    }, [contract]);
+      return () => {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      };
+    }
+  }, []);
 
-    return (
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Blockchain Voting System</h1>
+      {!account ? (
+        <ConnectWallet onWalletConnected={handleWalletConnected} />
+      ) : (
         <div>
-            <h1>Blockchain Voting System</h1>
-            {!walletAddress ? (
-                <button onClick={connectToWallet}>Connect Wallet</button>
-            ) : (
-                <p>Connected as: {walletAddress}</p>
-            )}
-            <div>
-                <h2>Create a Poll</h2>
-                <input
-                    type="text"
-                    placeholder="Poll Title"
-                    value={newPoll.title}
-                    onChange={(e) => setNewPoll({ ...newPoll, title: e.target.value })}
-                />
-                <input
-                    type="text"
-                    placeholder="Options (comma-separated)"
-                    value={newPoll.options.join(", ")}
-                    onChange={(e) =>
-                        setNewPoll({
-                            ...newPoll,
-                            options: e.target.value.split(",").map((opt) => opt.trim()),
-                        })
-                    }
-                />
-                <input
-                    type="number"
-                    placeholder="Duration (minutes)"
-                    value={newPoll.duration}
-                    onChange={(e) =>
-                        setNewPoll({ ...newPoll, duration: parseInt(e.target.value) })
-                    }
-                />
-                <button onClick={createPoll}>Create Poll</button>
-            </div>
-            <div>
-                <h2>Available Polls</h2>
-                {polls.map((poll) => (
-                    <div key={poll.id}>
-                        <h3>{poll.title}</h3>
-                        <p>Creator: {poll.creator}</p>
-                        <p>Ends: {new Date(poll.endTime * 1000).toLocaleString()}</p>
-                        <div>
-                            {poll.options.map((option, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => voteForOption(poll.id, index)}
-                                >
-                                    {option}
-                                </button>
-                            ))}
-                        </div>
-                        <button onClick={() => fetchPollResults(poll.id)}>
-                            View Results
-                        </button>
-                        {pollResults[poll.id] && (
-                            <div>
-                                <h4>Results</h4>
-                                {pollResults[poll.id].map((votes, index) => (
-                                    <p key={index}>
-                                        {poll.options[index]}: {votes} votes
-                                    </p>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
+          <p>Account: {account}</p>
+          <p>Balance: {balance} ETH</p>
+          <button
+            onClick={disconnectWallet}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2"
+          >
+            Disconnect
+          </button>
         </div>
-    );
+      )}
+      {account && provider && (
+        <VotingSystem provider={provider} account={account} />
+      )}
+    </div>
+  );
 };
 
 export default App;
+
